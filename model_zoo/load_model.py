@@ -20,7 +20,7 @@ def load_model(version, new_model, retrain=False, to_cuda=True, *args):
     if not retrain:
         try:
             model.load_state_dict(torch.load(
-                os.path.join("model_zoo/model", "model_weights_{}.pth".format(version)),
+                os.path.join("model_zoo/model", "model_weights_{}.pkl".format(version)),
                 map_location=location
             ))
             print("[info]: load model done.")
@@ -35,3 +35,6 @@ def load_model(version, new_model, retrain=False, to_cuda=True, *args):
         model = model.cuda()
     return model, create_new_model
 
+
+def save_model(version, model):
+    torch.save(model, os.path.join("model_zoo/model", "model_{}.pkl".format(version)))
