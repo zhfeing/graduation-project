@@ -1,6 +1,6 @@
 import numpy as np
-import os
 import pickle
+import os
 from get_data import data_parms
 from get_data.data_parms import train_batch_num
 from get_data import data_augmentation
@@ -83,19 +83,21 @@ def data_preprocess(
     return train_x, train_y, test_x, test_y
 
 
-def import_data(
+def import_numpy_data(
         cifar_10_dir, load_dir, reload=False, valid_size=5000,
         to_BGR=True, to_channel_first=False
 ):
     """
     :param cifar_10_dir:
     :param reload: if reload==True, reload whole dataset and do preprocess, else load preprocessed data from disk
+        and all parameters behind will take no effect
     :param valid_size: size of valid set
-    :return: train_x, train_y, test_x, test_y, train_x_mean, label_names
+    :return: data_dict
     """
     data_dict = dict()
     if not reload:
         try:
+            print("[info]: loading data")
             data_dict['train_x'] = np.load(os.path.join(load_dir, "train_x.npy"))
             data_dict['train_y'] = np.load(os.path.join(load_dir, "train_y.npy"))
             data_dict['valid_x'] = np.load(os.path.join(load_dir, "valid_x.npy"))
@@ -128,11 +130,12 @@ def import_data(
     # data augmentation
     train_x, train_y = data_augmentation.data_augmentation(
         train_x,
-        train_y
+        train_y,
+        channel_first=to_channel_first
     )
     # data normalization
     if to_channel_first:
-        mean = np.mean(train_x, axis=(0, 2, 3)).astype(np.float32)
+        mean = np.mean(train_x, axis=(0, 2, 3)).astype(np.float32).reshape([1, 3, 1, 1])
     else:
         mean = np.mean(train_x, axis=(0, 1, 2)).astype(np.float32)
 
@@ -176,9 +179,62 @@ def import_data(
     return data_dict
 
 
-def test(cifar_10_dir, load_dir):
+def array_to_cuda_tensor(x):
+    import torch
+    x = torch.Tensor(x).cuda()
+    return x
+
+
+def import_dataset(load_dir, to_cuda=True):
+    from torch.utils import data
+    import torch
+
+    data_dict = import_numpy_data(
+        cifar_10_dir=None,
+        load_dir=load_dir,
+        reload=False
+    )
+
+    train_x = data_dict['train_x']
+    train_y = data_dict['train_y'].argmax(axis=1)
+    valid_x = data_dict['valid_x']
+    valid_y = data_dict['valid_y'].argmax(axis=1)
+    test_x = data_dict['test_x']
+    test_y = data_dict['test_y'].argmax(axis=1)
+
+    if to_cuda:
+        train_x = array_to_cuda_tensor(train_x).float()
+        train_y = array_to_cuda_tensor(train_y).long()
+        valid_x = array_to_cuda_tensor(valid_x).float()
+        valid_y = array_to_cuda_tensor(valid_y).long()
+        test_x = array_to_cuda_tensor(test_x).float()
+        test_y = array_to_cuda_tensor(test_y).long()
+    else:
+        train_x = torch.Tensor(train_x).float()
+        train_y = torch.Tensor(train_y).long()
+        valid_x = torch.Tensor(valid_x).float()
+        valid_y = torch.Tensor(valid_y).long()
+        test_x = torch.Tensor(test_x).float()
+        test_y = torch.Tensor(test_y).long()
+
+    train_set = data.TensorDataset(
+        train_x, train_y
+    )
+
+    valid_set = data.TensorDataset(
+        valid_x, valid_y
+    )
+
+    test_set = data.TensorDataset(
+        test_x, test_y
+    )
+
+    return train_set, valid_set, test_set
+
+
+def test(cifar_10_dir, load_dir, channel_first):
     import cv2
-    data_dict = import_data(cifar_10_dir, load_dir, reload=False, valid_size=5000, to_channel_first=False)
+    data_dict = import_numpy_data(cifar_10_dir, load_dir, reload=False, valid_size=5000, to_channel_first=channel_first)
 
     cv2.namedWindow("test", cv2.WINDOW_NORMAL)
     for i in range(20):
@@ -189,6 +245,10 @@ def test(cifar_10_dir, load_dir):
         x[x > 255] = 255
         x = x.astype(np.uint8)
 
+        if channel_first:
+            x = x[0]
+            x = np.transpose(x, [1, 2, 0])
+
         cv2.imshow("test", x)
         print(data_dict['label_names'][data_dict['train_y'][index].argmax()])
         cv2.waitKey()
@@ -198,7 +258,10 @@ if __name__ == "__main__":
     import os
 
     home = os.getenv("HOME")
-    data_path = os.path.join(home, "nfs/dataset/cifar/cifar-10-python")
-    test(data_path, "./data")
+    cifar_data_path = os.path.join(home, "nfs/dataset/cifar/cifar-10-python")
+    # save_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
+    save_data_path = "/media/Data/datasets/cifar/cifar-10-python/data"
+
+    test(cifar_data_path, save_data_path, True)
 
 

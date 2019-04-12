@@ -15,13 +15,13 @@ def random_crop_img(img, padding_size):
     return img
 
 
-def data_augmentation(train_x, train_y, flip_pr=0.5, padding_size=4, noise_std=1.414):
-    """
-    data_format: only implemented with channel_last
-    """
+def data_augmentation(train_x, train_y, channel_first, flip_pr=0.5, padding_size=4, noise_std=1.414):
     # padding and randomly flip
     flipped_img_list = []
     flipped_label_list = []
+
+    if channel_first:   # convert to channel last
+        train_x = np.transpose(train_x, axes=[0, 2, 3, 1])
 
     for i in range(train_x.shape[0]):
         img = train_x[i]
@@ -63,6 +63,9 @@ def data_augmentation(train_x, train_y, flip_pr=0.5, padding_size=4, noise_std=1
     train_x[train_x < 0] = 0
     train_x[train_x > 255] = 255
     train_x = train_x.astype(np.uint8)
+
+    if channel_first:   # convert to channel first
+        train_x = np.transpose(train_x, axes=[0, 3, 1, 2])
 
     return train_x, train_y
 
