@@ -17,6 +17,7 @@ class GoogLeNetUtils:
         return loss
 
     def detach_pred(self, pred):
-        for i in pred:
-            i = i.detach()
-        return pred
+        p = list()
+        for i in range(len(pred)):
+            p.append(pred[i].detach())
+        return p

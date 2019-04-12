@@ -3,7 +3,7 @@
 if [[ $HOSTNAME == "vipa210" ]]; then
     echo "run on vipa210"
     python run.py \
-    --gpu="2" --lr=0.01 --epochs=2 \
+    --gpu="2" --lr=0.01 --epochs=200 \
     --train_v="test" --load_v="test" \
     --regularize=0 --retrain=1 --batch_size=256
 
