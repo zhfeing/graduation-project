@@ -255,17 +255,26 @@ def my_googLeNet():
     step_1_channel = 32
 
     channel_lists = list()
-    channel_lists.append(make_channel_list(step_1_channel, 32, 48, 64, 8, 16, 16))     # 128
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[0]), 32, 48, 64, 8, 16, 16))     # 128
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[1]), 32, 48, 64, 8, 16, 16))     # 128
+    channel_lists.append(make_channel_list(
+        step_1_channel, 32, 48, 64, 8, 16, 16))     # 3a 128
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[0]), 64, 64, 96, 16, 48, 32))    # 3b 240
 
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[2]), 96, 48, 104, 8, 24, 32))    # 256
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[3]), 96, 48, 104, 8, 24, 32))    # 256
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[4]), 96, 48, 104, 8, 24, 32))    # 256
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[5]), 96, 48, 104, 8, 24, 32))    # 256
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[1]), 96, 48, 104, 8, 24, 32))    # 4a 256
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[2]), 80, 56, 112, 12, 32, 32))   # 4b 256
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[3]), 64, 64, 128, 12, 32, 32))   # 4c 256
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[4]), 56, 72, 144, 16, 32, 32))   # 4d 264
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[5]), 128, 80, 160, 16, 64, 64))  # 4e 416
 
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[6]), 192, 96, 208, 16, 48, 64))    # 512
-    channel_lists.append(make_channel_list(get_block_output_size(channel_lists[7]), 192, 96, 208, 16, 48, 64))    # 512
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[6]), 128, 80, 160, 16, 64, 64))  # 5a 416
+    channel_lists.append(make_channel_list(
+        get_block_output_size(channel_lists[7]), 192, 96, 208, 16, 48, 64))  # 5b 512
 
     model = GoogLeNet(
         input_channel=3,
@@ -280,8 +289,17 @@ def my_googLeNet():
 if __name__ == "__main__":
     import numpy as np
     google_model = my_googLeNet()
-
-    x = np.random.random([1, 3, 32, 32])
-    x = torch.Tensor(x)
-    y, y1, y2 = google_model(x)
-    print(y, y1, y2)
+    params = list(google_model.parameters())
+    k = 0
+    for i in params:
+        l = 1
+        for j in i.size():
+            l *= j
+        k = k + l
+        print(l)
+    k = format(k, ',')
+    print("total parameters: " + k)
+    #
+    # x = np.random.random([1, 3, 32, 32])
+    # x = torch.Tensor(x)
+    # y, y1, y2 = google_model(x)
