@@ -1,28 +1,28 @@
 import torch
 from torch.utils import data
-from torch import nn
 from torch import optim
 import numpy as np
 import os
 
 
-lossness = nn.CrossEntropyLoss().cuda()
-
-
-def calculate_loss(pred, y):
-    return lossness(pred, y)
-
-
-def eval_model(model, data_loader):
+def eval_model(model, data_loader, eval_loss_function, get_true_pred, detach_pred):
+    """
+    eval_loss_function: calculate loss from output and ground truth, in the function, it will be called as :
+        eval_loss_function(pred, label), which pred comes from model output
+    get_true_pred: get true prediction from output, useful especially when model output a tuple, it will be called as
+        true_pred = get_true_pred(module_output)
+    detach_pred: detach pred from output, useful when model output a tuple called as detach_pred(module_output)
+    """
     model.eval()
     acc = 0
     loss = 0
     num = len(data_loader)
     for step, (x, y) in enumerate(data_loader):
         batch_size = x.size()[0]
-        pred, _, _ = model(x)
-        pred = pred.detach()
-        loss += calculate_loss(pred, y)
+        pred = model(x)
+        pred = detach_pred(pred)
+        loss += eval_loss_function(pred, y)
+        pred = get_true_pred(pred)
         pred = torch.max(pred, 1)[1]
         acc += (pred == y).sum().float() / batch_size
 
@@ -31,7 +31,23 @@ def eval_model(model, data_loader):
     return loss.item(), acc.item()
 
 
-def fit(model, epoch, optimizer, train_loader, valid_loader, check_freq, train_version):
+def fit(
+        model, epoch, optimizer,
+        train_loader, valid_loader,
+        check_freq, train_version,
+        train_loss_function, get_true_pred, eval_loss_function, detach_pred
+):
+    """
+    check_freq: check training result in step
+    train_loss_function: calculate loss from output and ground truth, in the function, it will be called as :
+        train_loss_function(pred, label)
+    get_true_pred: get true prediction from output, useful especially when model output a tuple, it will be called as
+        true_pred = get_true_pred(module_output)
+    eval_loss_function: called by function 'eval_model'
+    detach_pred: called by function 'eval_model'
+    return: loss and acc history
+    """
+
     # train history
     loss_his = list()
     acc_his = list()
@@ -50,15 +66,16 @@ def fit(model, epoch, optimizer, train_loader, valid_loader, check_freq, train_v
 
         for step, (x, y) in enumerate(train_loader):
             batch_size = x.size()[0]
-            pred_1, pred_2, pred_3 = model(x)
-            loss = calculate_loss(pred_1, y) + 0.3*calculate_loss(pred_2, y) + 0.3*calculate_loss(pred_3, y)
+            pred = model(x)
+            loss = train_loss_function(pred, y)
+            # back propagation
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # save check point
             if step % check_freq == 0:
-                pred = torch.max(pred_1, 1)[1]
+                pred = torch.max(get_true_pred(pred), 1)[1]
                 acc = (pred == y).sum().float() / batch_size
 
                 loss_his.append(loss.item())
@@ -81,7 +98,12 @@ def fit(model, epoch, optimizer, train_loader, valid_loader, check_freq, train_v
 
         # eval
         print("\n\n have an evaluation...")
-        val_loss, val_acc = eval_model(model, valid_loader)
+        val_loss, val_acc = eval_model(
+            model=model,
+            data_loader=valid_loader,
+            eval_loss_function=eval_loss_function, get_true_pred=get_true_pred,
+            detach_pred=detach_pred
+        )
 
         loss_val_his.append(val_loss)
         acc_val_his.append(val_acc)
@@ -109,13 +131,17 @@ def fit(model, epoch, optimizer, train_loader, valid_loader, check_freq, train_v
     return loss_val_his, acc_val_his
 
 
-def train(model, train_set, valid_set, lr, epoch, train_version, batch_size, regularize, check_freq=5):
+def train(
+        model, train_set, valid_set, lr, epoch, train_version, batch_size, regularize,
+        train_loss_function, get_true_pred, eval_loss_function, detach_pred, check_freq=5
+):
     """
-    :param model: cuda model
-    :param train_set:  cuda dataset
-    :param valid_set:  cuda valid set
-    :param lr:
-    :return:
+    model: cuda model
+    train_set:  cuda dataset
+    valid_set:  cuda valid set
+    train_loss_function: called by function 'fit'
+    get_true_pred:  called by function 'fit'
+    eval_loss_function: called by function 'fit'
     """
     train_loader = data.DataLoader(
         dataset=train_set,
@@ -140,7 +166,11 @@ def train(model, train_set, valid_set, lr, epoch, train_version, batch_size, reg
         train_loader=train_loader,
         valid_loader=valid_loader,
         check_freq=check_freq,
-        train_version=train_version
+        train_version=train_version,
+        train_loss_function=train_loss_function,
+        get_true_pred=get_true_pred,
+        eval_loss_function=eval_loss_function,
+        detach_pred=detach_pred
     )
 
     # get best model
@@ -160,7 +190,13 @@ def train(model, train_set, valid_set, lr, epoch, train_version, batch_size, reg
                              format(train_version, ep))
             )
         )
-        loss, acc = eval_model(model, valid_loader)
+        loss, acc = eval_model(
+            model=model,
+            data_loader=valid_loader,
+            eval_loss_function=eval_loss_function,
+            get_true_pred=get_true_pred,
+            detach_pred=detach_pred
+        )
         print("[info]: epoch {}: val acc: {:.4f}".format(ep, acc))
         best_epoch_loss_val = np.append(best_epoch_loss_val, loss)
         best_epoch_acc_val = np.append(best_epoch_acc_val, acc)

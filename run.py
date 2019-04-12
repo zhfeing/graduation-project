@@ -6,6 +6,7 @@ import test
 from get_data import import_data
 from model_zoo import googLeNet
 from model_zoo import load_model
+import utils
 
 
 def str2bool(v):
@@ -55,6 +56,8 @@ train_set, valid_set, test_set = import_data.import_dataset(
     load_dir=args.load_data_dir
 )
 
+googlenet_util = utils.GoogLeNetUtils()
+
 train.train(
     model=model,
     train_set=train_set,
@@ -63,13 +66,20 @@ train.train(
     epoch=args.epochs,
     batch_size=args.batch_size,
     regularize=args.regularize,
-    train_version=args.train_v
+    train_version=args.train_v,
+    train_loss_function=googlenet_util.loss_for_train,
+    get_true_pred=googlenet_util.get_true_pred,
+    eval_loss_function=googlenet_util.loss_for_eval,
+    detach_pred=googlenet_util.detach_pred
 )
 
 test.test(
     test_version=args.train_v,
     test_set=test_set,
-    batch_size=args.batch_size
+    batch_size=args.batch_size,
+    get_true_pred=googlenet_util.get_true_pred,
+    eval_loss_function=googlenet_util.loss_for_eval,
+    detach_pred=googlenet_util.detach_pred
 )
 
 draw_his.draw_his(version=args.train_v, show=False)
