@@ -296,10 +296,11 @@ if __name__ == "__main__":
         for j in i.size():
             l *= j
         k = k + l
-        print(l)
+        # print(l)
     k = format(k, ',')
     print("total parameters: " + k)
     #
-    # x = np.random.random([1, 3, 32, 32])
-    # x = torch.Tensor(x)
-    # y, y1, y2 = google_model(x)
+    x = np.random.random([1, 3, 32, 32])
+    x = torch.Tensor(x)
+    y, _, _ = google_model(x)
+    print(y.size())
