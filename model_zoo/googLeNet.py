@@ -2,9 +2,6 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
 
 def get_block_output_size(channel_list):
     size = channel_list['#1x1'] + channel_list['#3x3'] + channel_list['#5x5'] + channel_list['pool proj']
@@ -158,7 +155,7 @@ class GoogLeNet(nn.Module):
                 out_channels=self._step_1_channel,
                 kernel_size=3,
                 stride=1,
-                padding=2
+                padding=1
             )
         )
 
@@ -204,7 +201,7 @@ class GoogLeNet(nn.Module):
             nn.Dropout(0.7),
             nn.Linear(64, self._class_num)
         )
-
+        
         self._classifier_aux_2 = nn.Sequential(
             nn.Linear(get_block_output_size(self._channel_list[5]), 64),
             nn.Dropout(0.7),
@@ -214,6 +211,7 @@ class GoogLeNet(nn.Module):
     def forward(self, x):
         x = self._step_1(x)
         x = self._inception_3(x)
+
         x = self._inception_4a(x)
 
         # to aux classifier
@@ -232,6 +230,7 @@ class GoogLeNet(nn.Module):
         # main path
         x = self._inception_4e(x)
         x = self._inception_5(x)
+
         x = F.avg_pool2d(x, x.size()[2:])
         x = x.view(x.size(0), -1)
         x = self._classifier_main(x)
@@ -296,10 +295,11 @@ if __name__ == "__main__":
         for j in i.size():
             l *= j
         k = k + l
-        print(l)
+        # print(l)
     k = format(k, ',')
     print("total parameters: " + k)
     #
-    # x = np.random.random([1, 3, 32, 32])
-    # x = torch.Tensor(x)
-    # y, y1, y2 = google_model(x)
+    x = np.random.random([1, 3, 32, 32])
+    x = torch.Tensor(x)
+    y, _, _ = google_model(x)
+    print(y.size())
