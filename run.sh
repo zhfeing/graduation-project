@@ -3,8 +3,8 @@
 if [[ $HOSTNAME == "vipa210" ]]; then
     echo "run on vipa210"
     python run.py \
-    --gpu="2" --lr=0.01 --epochs=2 \
-    --train_v="test" --load_v="test" \
+    --gpu="2" --lr=0.01 --epochs=40 \
+    --train_v="googlenet-1.0" --load_v="googlenet-1.0" \
     --regularize=0 --retrain=1 --batch_size=256
 
 elif [[ $HOSTNAME == "vipa-Precision-Tower-7910" ]]; then

@@ -91,7 +91,7 @@ def fit(
                         model.state_dict(),
                         os.path.join(
                             "./model_zoo/model",
-                            "model_weights_{}_epoch_{}.pth".format(train_version, ep)
+                            "model_weights_{}_epoch_{}.pkl".format(train_version, ep)
                         )
                     )
                     print("\n[info]: save model with loss: {:.5f}, acc: {:.4f}".format(epoch_best_loss, epoch_best_acc))
@@ -115,7 +115,7 @@ def fit(
             model.state_dict(),
             os.path.join(
                 "./model_zoo/model",
-                "model_weights_{}_epoch_{}_final.pth".format(train_version, ep)
+                "model_weights_{}_epoch_{}_final.pkl".format(train_version, ep)
             )
         )
 
@@ -186,7 +186,7 @@ def train(
     for ep in range(epoch):
         model.load_state_dict(
             torch.load(
-                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}.pth".
+                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}.pkl".
                              format(train_version, ep))
             )
         )
@@ -207,7 +207,7 @@ def train(
         print("[info]: choose batch final module")
         model.load_state_dict(
             torch.load(
-                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}_final.pth".
+                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}_final.pkl".
                              format(train_version, best_final_id))
             )
         )
@@ -215,7 +215,7 @@ def train(
         print("[info]: choose batch best module")
         model.load_state_dict(
             torch.load(
-                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}.pth".
+                os.path.join("model_zoo/model", "model_weights_{}_epoch_{}.pkl".
                              format(train_version, best_epoch_id))
             )
         )
@@ -224,7 +224,7 @@ def train(
         model.state_dict(),
         os.path.join(
             "./model_zoo/model",
-            "model_weights_{}.pth".format(train_version)
+            "model_weights_{}.pkl".format(train_version)
         )
     )
 
