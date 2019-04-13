@@ -1,4 +1,5 @@
 import argparse
+import torch
 import os
 import draw_his
 import train
@@ -83,3 +84,6 @@ test.test(
 )
 
 draw_his.draw_his(version=args.train_v, show=False)
+
+model = model.cpu()
+load_model.save_model(args.train_v, model)
