@@ -4,139 +4,162 @@ import torch
 
 
 class ResBlock(nn.Module):
-    def __init__(self, in_channels, subsample):
+    def __init__(self, in_channels, with_subsample):
         super(ResBlock, self).__init__()
         self._in_channels = in_channels
-        self._subsample = subsample
+        self._with_subsample = with_subsample
+
+        if with_subsample:
+            self._out_channels = 2*in_channels
+        else:
+            self._out_channels = in_channels
+
         self._conv_1 = None
         self._conv_2 = None
+        self._short_cut = None
         self.build()
 
     def build(self):
-        if self._subsample:
-            self._conv_1 = nn.Conv2d(
-                in_channels=self._in_channels,
-                out_channels=2*self._in_channels,
-                kernel_size=3, stride=2, padding=
+        if self._with_subsample:
+            self._conv_1 = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=self._in_channels,
+                    out_channels=self._out_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1
+                ),
+                nn.BatchNorm2d(self._out_channels),
+                nn.ReLU()
+            )
+        else:
+            self._conv_1 = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=self._in_channels,
+                    out_channels=self._out_channels,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1
+                ),
+                nn.BatchNorm2d(self._out_channels),
+                nn.ReLU()
             )
 
-
-def res_block(x, filters, use_regularizer, with_subsample=False, weight_decay=0.0001):
-    """
-    :param x:
-    :param filters:
-    :param with_bypass:
-    :param regularizer: regularizer
-    :return:
-    """
-    if with_subsample:
-        x_1 = model_components.my_conv_with_bn_relu(
-            x=x,
-            filters=filters,
-            kernel_size=3,
-            padding="same",
-            stride=2,
-            use_regularizer=use_regularizer,
-            weight_decay=weight_decay
+        self._conv_2 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=self._out_channels,
+                out_channels=self._out_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1
+            ),
+            nn.BatchNorm2d(self._out_channels)
         )
 
-    else:
-        x_1 = model_components.my_conv_with_bn_relu(
-            x=x,
-            filters=filters,
-            kernel_size=3,
-            padding="same",
-            stride=1,
-            use_regularizer=use_regularizer,
-            weight_decay=weight_decay
+        if self._with_subsample:
+            self._short_cut = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=self._in_channels,
+                    out_channels=self._out_channels,
+                    kernel_size=1,
+                    stride=2
+                ),
+                nn.BatchNorm2d(self._out_channels)
+            )
+        else:
+            self._short_cut = nn.Sequential()
+
+    def forward(self, x):
+        short_cut = self._short_cut(x)
+        x = self._conv_1(x)
+        x = self._conv_2(x)
+        x = F.relu(x + short_cut)
+        return x
+
+
+class Resnet(nn.Module):
+    def __init__(self, n, in_channels, channel_base):
+        super(Resnet, self).__init__()
+        self._n = n
+        self._in_channels = in_channels
+        self._channel_base = channel_base
+        self._conv_1 = None
+        self._middle = None
+        self._classifier = None
+        self.build()
+
+    def build(self):
+        self._conv_1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=self._in_channels,
+                out_channels=self._channel_base,
+                kernel_size=3,
+                stride=1,
+                padding=1
+            ),
+            nn.BatchNorm2d(self._channel_base),
+            nn.ReLU()
+        )
+        self._middle = nn.Sequential()
+        in_channel = self._channel_base
+
+        for i in range(3):
+            if i == 0:
+                self._middle.add_module(
+                    'conv_{}_{}'.format(i, 0),
+                    ResBlock(in_channel, False)
+                )
+            else:
+                self._middle.add_module(
+                    'conv_{}_{}'.format(i, 0),
+                    ResBlock(in_channel, True)
+                )
+                in_channel *= 2
+
+            for j in range(1, self._n):
+                self._middle.add_module(
+                    'conv_{}_{}'.format(i, j),
+                    ResBlock(in_channel, False)
+                )
+
+        self._classifier = nn.Sequential(
+            nn.Linear(in_channel, 10)
         )
 
-    x_1 = model_components.my_conv(
-            x=x_1,
-            filters=filters,
-            kernel_size=3,
-            padding="same",
-            stride=1,
-            use_regularizer=use_regularizer,
-            weight_decay=weight_decay
-        )
-    x_1 = layers.BatchNormalization()(x_1)
-
-    if with_subsample:
-        shortcut = model_components.my_conv(
-            x=x,
-            filters=filters,
-            kernel_size=1,
-            padding="same",
-            stride=2,
-            use_regularizer=use_regularizer,
-            weight_decay=weight_decay
-        )
-    else:
-        shortcut = x
-
-    x = layers.Add()([shortcut, x_1])
-    x = layers.Activation('relu')(x)
-    return x
+    def forward(self, x):
+        x = self._conv_1(x)
+        x = self._middle(x)
+        x = F.avg_pool2d(x, x.size()[2:])
+        x = x.view(x.size(0), -1)
+        x = self._classifier(x)
+        return x
 
 
-def my_ResNet(use_regularizer=True):
-    print("[info]: use regularizer: {}".format(use_regularizer))
-
-    weight_decay = 0.0001
-
-    input_tensor = layers.Input(shape=[32, 32, 3])
-
-    x = model_components.my_conv_with_bn_relu(
-            x=input_tensor,
-            filters=16,
-            kernel_size=3,
-            padding="same",
-            stride=1,
-            use_regularizer=use_regularizer,
-            weight_decay=weight_decay
-        )
-
-    x = res_block(x, 16, use_regularizer, weight_decay=weight_decay)
-    x = res_block(x, 16, use_regularizer, weight_decay=weight_decay)
-    x = res_block(x, 16, use_regularizer, weight_decay=weight_decay)
-
-    x = res_block(x, 32, use_regularizer, with_subsample=True, weight_decay=weight_decay)
-    x = res_block(x, 32, use_regularizer, weight_decay=weight_decay)
-    x = res_block(x, 32, use_regularizer, weight_decay=weight_decay)
-
-    x = res_block(x, 64, use_regularizer, with_subsample=True, weight_decay=weight_decay)
-    x = res_block(x, 64, use_regularizer, weight_decay=weight_decay)
-    x = res_block(x, 64, use_regularizer, weight_decay=weight_decay)
-
-    x = layers.GlobalAvgPool2D()(x)
-    # do not add dropout right before output layer
-    x = layers.Dropout(0.8)(x)
-
-    regularizer = None
-    if use_regularizer:
-        regularizer = keras.regularizers.l2(0.0001)
-
-    x = layers.Dense(
-        10,
-        activation='softmax',
-        kernel_regularizer=regularizer,
-        bias_regularizer=regularizer
-    )(x)
-
-    model = keras.Model(input_tensor, x)
-
+def my_resnet():
+    model = Resnet(
+        n=18,
+        in_channels=3,
+        channel_base=16
+    )
     return model
 
 
 if __name__ == "__main__":
-    my_res_net = my_ResNet()
-    my_res_net.compile(
-        optimizer=keras.optimizers.Adam(),
-        loss=keras.losses.categorical_crossentropy,
-        metrics=['acc']
-    )
-    my_res_net.summary()
-    my_res_net.save("./model/test_model.h5")
+    import numpy as np
 
+    resnet_model = my_resnet()
+    params = list(resnet_model.parameters())
+    k = 0
+    for i in params:
+        l = 1
+        for j in i.size():
+            l *= j
+        k = k + l
+        # print(l)
+    k = format(k, ',')
+    print("total parameters: " + k)
 
+    x = np.random.random([1, 3, 32, 32])
+    x = torch.Tensor(x)
+    y = resnet_model(x)
+    print(y.size())

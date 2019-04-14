@@ -21,3 +21,22 @@ class GoogLeNetUtils:
         for i in range(len(pred)):
             p.append(pred[i].detach())
         return p
+
+
+class ResNetUtils:
+    def __init__(self):
+        self._loss = nn.CrossEntropyLoss()
+
+    def get_true_pred(self, pred):
+        return pred
+
+    def loss_for_train(self, pred, y):
+        loss = self._loss(pred, y)
+        return loss
+
+    def loss_for_eval(self, pred, y):
+        loss = self._loss(pred, y)
+        return loss
+
+    def detach_pred(self, pred):
+        return pred.detach()

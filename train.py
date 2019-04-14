@@ -59,9 +59,9 @@ def fit(
         epoch_best_acc = 0
         model.train()
 
-        if ep % 10 == 0 and ep > 0:
+        if ep % 5 == 0 and ep > 0:
             for param_group in optimizer.param_groups:
-                param_group['lr'] /= 2
+                param_group['lr'] *= 0.7
             print("\n[info]: lr halved")
 
         for step, (x, y) in enumerate(train_loader):

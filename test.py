@@ -4,12 +4,12 @@ from model_zoo import googLeNet
 import train
 
 
-def test(test_version, test_set, eval_loss_function, get_true_pred, detach_pred, batch_size=32):
+def test(test_version, test_set, new_model, eval_loss_function, get_true_pred, detach_pred, batch_size=32):
     print("[info]: testing model...")
     # load model
     model, create_new = load_model.load_model(
         version=test_version,
-        new_model=googLeNet.my_googLeNet,
+        new_model=new_model,
         retrain=False,
         to_cuda=True
     )

@@ -6,6 +6,7 @@ import train
 import test
 from get_data import import_data
 from model_zoo import googLeNet
+from model_zoo import resnet
 from model_zoo import load_model
 import utils
 
@@ -46,9 +47,13 @@ print("[info]: regularize: {}".format(args.regularize))
 print("[info]: batch_size: {}".format(args.batch_size))
 
 
+# my_util = utils.GoogLeNetUtils()
+my_util = utils.ResNetUtils()
+new_model = resnet.my_resnet
+
 model, create_new = load_model.load_model(
     version=args.load_v,
-    new_model=googLeNet.my_googLeNet,
+    new_model=new_model,
     retrain=args.retrain,
     to_cuda=True
 )
@@ -56,8 +61,6 @@ model, create_new = load_model.load_model(
 train_set, valid_set, test_set = import_data.import_dataset(
     load_dir=args.load_data_dir
 )
-
-googlenet_util = utils.GoogLeNetUtils()
 
 train.train(
     model=model,
@@ -68,19 +71,20 @@ train.train(
     batch_size=args.batch_size,
     regularize=args.regularize,
     train_version=args.train_v,
-    train_loss_function=googlenet_util.loss_for_train,
-    get_true_pred=googlenet_util.get_true_pred,
-    eval_loss_function=googlenet_util.loss_for_eval,
-    detach_pred=googlenet_util.detach_pred
+    train_loss_function=my_util.loss_for_train,
+    get_true_pred=my_util.get_true_pred,
+    eval_loss_function=my_util.loss_for_eval,
+    detach_pred=my_util.detach_pred
 )
 
 test.test(
     test_version=args.train_v,
     test_set=test_set,
+    new_model=new_model,
     batch_size=args.batch_size,
-    get_true_pred=googlenet_util.get_true_pred,
-    eval_loss_function=googlenet_util.loss_for_eval,
-    detach_pred=googlenet_util.detach_pred
+    get_true_pred=my_util.get_true_pred,
+    eval_loss_function=my_util.loss_for_eval,
+    detach_pred=my_util.detach_pred
 )
 
 draw_his.draw_his(version=args.train_v, show=False)
