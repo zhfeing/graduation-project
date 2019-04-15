@@ -1,6 +1,5 @@
 from torch.utils import data
 from model_zoo import load_model
-from model_zoo import googLeNet
 import train
 
 
@@ -10,6 +9,7 @@ def test(test_version, test_set, new_model, eval_loss_function, get_true_pred, d
     model, create_new = load_model.load_model(
         version=test_version,
         new_model=new_model,
+        just_weights=False,
         retrain=False,
         to_cuda=True
     )
@@ -29,4 +29,5 @@ def test(test_version, test_set, new_model, eval_loss_function, get_true_pred, d
         detach_pred=detach_pred
     )
     print("[info]: test loss: {:5f}, test acc: {:4f}".format(loss, acc))
+    return loss, acc
 

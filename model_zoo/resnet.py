@@ -144,7 +144,7 @@ def my_resnet():
     return model
 
 
-if __name__ == "__main__":
+def test():
     import numpy as np
 
     resnet_model = my_resnet()
@@ -163,3 +163,7 @@ if __name__ == "__main__":
     x = torch.Tensor(x)
     y = resnet_model(x)
     print(y.size())
+
+
+if __name__ == "__main__":
+    test()

@@ -54,6 +54,7 @@ new_model = resnet.my_resnet
 model, create_new = load_model.load_model(
     version=args.load_v,
     new_model=new_model,
+    just_weights=False,
     retrain=args.retrain,
     to_cuda=True
 )
