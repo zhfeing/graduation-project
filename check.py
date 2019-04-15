@@ -120,23 +120,23 @@ class EnsembleModel(nn.Module):
             print("[info]: load googlenet failed")
             exit(-1)
 
-        self._resnet_model, create_new = load_model.load_model(
-            version=self._resnet_version,
-            new_model=resnet.my_resnet,
-            just_weights=False,
-            retrain=False,
-            to_cuda=True
-        )
-        if create_new:
-            print("[info]: load resnet failed")
-            exit(-1)
+        # self._resnet_model, create_new = load_model.load_model(
+        #     version=self._resnet_version,
+        #     new_model=resnet.my_resnet,
+        #     just_weights=False,
+        #     retrain=False,
+        #     to_cuda=True
+        # )
+        # if create_new:
+        #     print("[info]: load resnet failed")
+        #     exit(-1)
 
     def forward(self, x):
         x1, _, _ = self._google_model_1(x)
         x2, _, _ = self._google_model_2(x)
         x3, _, _ = self._google_model_3(x)
-        x4 = self._resnet_model(x)
-        x = (x1 + x2 + x3 + x4)/4.0
+        # x4 = self._resnet_model(x)
+        x = (x1 + x2 + x3)/3.0
         return x
 
 
@@ -155,8 +155,22 @@ def check_ensemble():
     print("loss: {}, acc: {}".format(loss, acc))
 
 
+def get_test_acc():
+    import test
+    from model_zoo import resnet
+    import utils
+
+    new_model = resnet.my_resnet
+    new_util = utils.ResNetUtils()
+
+    default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
+    train_set, valid_set, test_set = import_data.import_dataset(load_dir=default_load_data_dir)
+    test.test(
+        "resnet-1.0", test_set, new_model, new_util.loss_for_eval,
+        new_util.get_true_pred, new_util.detach_pred, 128
+    )
+
+
 if __name__ == "__main__":
-    check_ensemble()
-
-
+    get_test_acc()
 
