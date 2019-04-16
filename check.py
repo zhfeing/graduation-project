@@ -6,8 +6,6 @@ import numpy as np
 import cv2
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(1)
-
 
 def soft_max(x):
     num = np.exp(x)
@@ -76,11 +74,11 @@ def check_failed_example():
 
 
 class EnsembleModel(nn.Module):
-    def __init__(self, googlenet_version_1, googlenet_version_2, googlenet_version_3, resnet_version):
+    def __init__(self, googlenet_version_1, googlenet_version_2, resnet_version):
         super(EnsembleModel, self).__init__()
         self._googlenet_version_1 = googlenet_version_1
         self._googlenet_version_2 = googlenet_version_2
-        self._googlenet_version_3 = googlenet_version_3
+        # self._googlenet_version_3 = googlenet_version_3
         self._resnet_version = resnet_version
         self._google_model_1 = None
         self._google_model_2 = None
@@ -109,35 +107,35 @@ class EnsembleModel(nn.Module):
         if create_new:
             print("[info]: load googlenet failed")
             exit(-1)
-
-        self._google_model_3, create_new = load_model.load_model(
-            version=self._googlenet_version_3,
-            new_model=googLeNet.my_googLeNet,
-            just_weights=False,
-            retrain=False,
-            to_cuda=True
-        )
-        if create_new:
-            print("[info]: load googlenet failed")
-            exit(-1)
-
-        # self._resnet_model, create_new = load_model.load_model(
-        #     version=self._resnet_version,
-        #     new_model=resnet.my_resnet,
+        #
+        # self._google_model_3, create_new = load_model.load_model(
+        #     version=self._googlenet_version_3,
+        #     new_model=googLeNet.my_googLeNet,
         #     just_weights=False,
         #     retrain=False,
         #     to_cuda=True
         # )
         # if create_new:
-        #     print("[info]: load resnet failed")
+        #     print("[info]: load googlenet failed")
         #     exit(-1)
+
+        self._resnet_model, create_new = load_model.load_model(
+            version=self._resnet_version,
+            new_model=resnet.my_resnet,
+            just_weights=False,
+            retrain=False,
+            to_cuda=True
+        )
+        if create_new:
+            print("[info]: load resnet failed")
+            exit(-1)
 
     def forward(self, x):
         x1, _, _ = self._google_model_1(x)
         x2, _, _ = self._google_model_2(x)
-        x3, _, _ = self._google_model_3(x)
-        # x4 = self._resnet_model(x)
-        x = (x1 + x2 + x3)/3.0
+        # x3, _, _ = self._google_model_3(x)
+        x4 = self._resnet_model(x)
+        x = (x1 + x2 + x4)/3.0
         return x
 
 
@@ -145,7 +143,7 @@ def check_ensemble():
     import train
     from torch.utils import data
 
-    model = EnsembleModel("googlenet-1.0", "googlenet-2.0", "googlenet-3.0", "resnet-1.0")
+    model = EnsembleModel("googlenet-1.0", "googlenet-2.0", "resnet-2.0")
 
     default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
     train_set, valid_set, test_set = import_data.import_dataset(load_dir=default_load_data_dir)
@@ -178,7 +176,7 @@ def get_acc_by_label():
     from torch.utils import data
 
     model, create_new = load_model.load_model(
-        version="googlenet-1.0",
+        version="resnet-2.0",
         new_model=googLeNet.my_googLeNet,
         just_weights=False,
         retrain=False,
@@ -189,14 +187,14 @@ def get_acc_by_label():
         exit(-1)
 
     default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
-    train_set, valid_set, test_set = import_data.import_dataset(default_load_data_dir, True)
+    train_set, valid_set, test_set = import_data.import_dataset(default_load_data_dir, train_to_cuda=False)
     loader = data.DataLoader(test_set, batch_size=128)
 
     acc_tabel = np.zeros([10, 10])
 
     for step, (x, y) in enumerate(loader):
         batch_size = x.size()[0]
-        pred, _, _ = model(x)
+        pred = model(x)
 
         pred_label = pred.cpu().detach().numpy().argmax(axis=1)
         true_label = y.cpu().detach().numpy()
@@ -208,5 +206,6 @@ def get_acc_by_label():
 
 
 if __name__ == "__main__":
-    get_acc_by_label()
+    os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(1)
+    check_ensemble()
 

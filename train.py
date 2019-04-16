@@ -36,7 +36,8 @@ def fit(
         model, epoch, optimizer,
         train_loader, valid_loader,
         check_freq, train_version,
-        train_loss_function, get_true_pred, eval_loss_function, detach_pred
+        train_loss_function, get_true_pred, eval_loss_function, detach_pred,
+        learn_rate_schedule
 ):
     """
     check_freq: check training result in step
@@ -46,6 +47,7 @@ def fit(
         true_pred = get_true_pred(module_output)
     eval_loss_function: called by function 'eval_model'
     detach_pred: called by function 'eval_model'
+    learn_rate_schedule: called as learn_rate_schedule(epoch, optimizer)
     return: loss and acc history
     """
 
@@ -60,10 +62,7 @@ def fit(
         epoch_best_acc = 0
         model.train()
 
-        if ep == 50 or ep == 80:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.1
-            print("\n[info]: lr divided by 10")
+        learn_rate_schedule(ep, optimizer)
 
         for step, (x, y) in enumerate(train_loader):
             batch_size = x.size()[0]
@@ -136,7 +135,8 @@ def fit(
 
 def train(
         model, train_set, valid_set, lr, epoch, train_version, batch_size, regularize,
-        train_loss_function, get_true_pred, eval_loss_function, detach_pred, check_freq=5
+        train_loss_function, get_true_pred, eval_loss_function, detach_pred,
+        learn_rate_schedule, check_freq=5
 ):
     """
     model: cuda model
@@ -145,6 +145,7 @@ def train(
     train_loss_function: called by function 'fit'
     get_true_pred:  called by function 'fit'
     eval_loss_function: called by function 'fit'
+    learn_rate_schedule: called by function 'fit'
     """
     train_loader = data.DataLoader(
         dataset=train_set,
@@ -173,7 +174,8 @@ def train(
         train_loss_function=train_loss_function,
         get_true_pred=get_true_pred,
         eval_loss_function=eval_loss_function,
-        detach_pred=detach_pred
+        detach_pred=detach_pred,
+        learn_rate_schedule=learn_rate_schedule
     )
 
     # get best model
