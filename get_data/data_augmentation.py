@@ -89,5 +89,3 @@ def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, noise_std=5.5e-3):
     x = torch.Tensor(x)
     return x
 
-
-img = cv2.imread("")

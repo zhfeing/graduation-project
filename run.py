@@ -51,6 +51,7 @@ my_util = utils.GoogLeNetUtils()
 # my_util = utils.ResNetUtils()
 new_model = googLeNet.my_googLeNet
 # new_model = resnet.my_resnet
+learn_rate_schedule = utils.google_learn_rate_schedule
 
 model, create_new = load_model.load_model(
     version=args.load_v,
@@ -78,7 +79,8 @@ train.train(
     train_loss_function=my_util.loss_for_train,
     get_true_pred=my_util.get_true_pred,
     eval_loss_function=my_util.loss_for_eval,
-    detach_pred=my_util.detach_pred
+    detach_pred=my_util.detach_pred,
+    learn_rate_schedule=learn_rate_schedule
 )
 
 test.test(

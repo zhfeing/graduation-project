@@ -40,3 +40,17 @@ class ResNetUtils:
 
     def detach_pred(self, pred):
         return pred.detach()
+
+
+def google_learn_rate_schedule(epoch, optimizer):
+    if epoch % 8 == 0 and epoch > 0:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.94
+        print("\n[info]: lr changed")
+
+
+def resnet_learn_rate_schedule(epoch, optimizer):
+    if epoch == 50 or epoch == 80:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.1
+        print("\n[info]: lr divided by 10")
