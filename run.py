@@ -47,9 +47,10 @@ print("[info]: regularize: {}".format(args.regularize))
 print("[info]: batch_size: {}".format(args.batch_size))
 
 
-# my_util = utils.GoogLeNetUtils()
-my_util = utils.ResNetUtils()
-new_model = resnet.my_resnet
+my_util = utils.GoogLeNetUtils()
+# my_util = utils.ResNetUtils()
+new_model = googLeNet.my_googLeNet
+# new_model = resnet.my_resnet
 
 model, create_new = load_model.load_model(
     version=args.load_v,
