@@ -43,9 +43,9 @@ class ResNetUtils:
 
 
 def google_learn_rate_schedule(epoch, optimizer):
-    if epoch % 8 == 0 and epoch > 0:
+    if epoch == 50 or epoch == 80:
         for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.94
+            param_group['lr'] *= 0.1
         print("\n[info]: lr changed")
 
 

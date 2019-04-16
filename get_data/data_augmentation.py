@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import cv2
+import random
 
 
 def random_crop_img(img, padding_size):
@@ -71,7 +72,7 @@ def numpy_data_augmentation(train_x, train_y, channel_first, flip_pr=0.5, paddin
     return train_x, train_y
 
 
-def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, noise_std=5.5e-3):
+def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, max_rotate_angle=30, max_scale=1.4):
     x = x.detach().numpy()
     x = np.transpose(x, axes=[0, 2, 3, 1])
     for i in range(x.shape[0]):
@@ -81,7 +82,21 @@ def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, noise_std=5.5e-3):
         if flip == 1:       # flip this img
             img = cv2.flip(img, 1)
 
+        # randomly crop img
         img = random_crop_img(img, padding_size)
+
+        # randomly rotate and scale img
+        # set parameter
+        angle = 2*max_rotate_angle*random.random() - max_rotate_angle   # [-a, a]
+        scale = (max_scale - 1.0/max_scale)*random.random() + 1.0/max_scale
+        # transform matrix
+        rotate_matrix = cv2.getRotationMatrix2D(
+            center=(img.shape[1] / 2, img.shape[0] / 2),
+            angle=angle,
+            scale=scale
+        )
+        img = cv2.warpAffine(src=img, M=rotate_matrix, dsize=(img.shape[0], img.shape[1]))
+
         # write back
         x[i] = img
 
