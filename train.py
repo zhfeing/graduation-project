@@ -60,10 +60,10 @@ def fit(
         epoch_best_acc = 0
         model.train()
 
-        # if ep % 10 == 0 and ep > 0:
-        #     for param_group in optimizer.param_groups:
-        #         param_group['lr'] *= 0.5
-        #     print("\n[info]: lr halved")
+        if ep == 50 or ep == 80:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.1
+            print("\n[info]: lr divided by 10")
 
         for step, (x, y) in enumerate(train_loader):
             batch_size = x.size()[0]

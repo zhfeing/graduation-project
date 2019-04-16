@@ -137,7 +137,7 @@ class Resnet(nn.Module):
 
 def my_resnet():
     model = Resnet(
-        n=7,
+        n=18,
         in_channels=3,
         channel_base=16
     )

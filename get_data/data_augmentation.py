@@ -85,10 +85,9 @@ def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, noise_std=5.5e-3):
         # write back
         x[i] = img
 
-    # add noise
-    noise = np.random.randn(*x.shape).astype(np.float32) * noise_std
-    x += noise
     x = np.transpose(x, axes=[0, 3, 1, 2])
     x = torch.Tensor(x)
     return x
 
+
+img = cv2.imread("")
