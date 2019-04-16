@@ -17,10 +17,11 @@ def soft_max(x):
 
 def check_failed_example():
     model, create_new = load_model.load_model(
-        version="googlenet-1.0",
+        version="googlenet-2.0",
         new_model=googLeNet.my_googLeNet,
+        just_weights=False,
         retrain=False,
-        to_cuda=False
+        to_cuda=True
     )
     if create_new:
         print("[info]: try to test a non-trained model")
@@ -171,6 +172,41 @@ def get_test_acc():
     )
 
 
+def get_acc_by_label():
+    from model_zoo import googLeNet
+    from model_zoo import load_model
+    from torch.utils import data
+
+    model, create_new = load_model.load_model(
+        version="googlenet-1.0",
+        new_model=googLeNet.my_googLeNet,
+        just_weights=False,
+        retrain=False,
+        to_cuda=True
+    )
+    if create_new:
+        print("[info]: load googlenet failed")
+        exit(-1)
+
+    default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
+    train_set, valid_set, test_set = import_data.import_dataset(default_load_data_dir, True)
+    loader = data.DataLoader(test_set, batch_size=128)
+
+    acc_tabel = np.zeros([10, 10])
+
+    for step, (x, y) in enumerate(loader):
+        batch_size = x.size()[0]
+        pred, _, _ = model(x)
+
+        pred_label = pred.cpu().detach().numpy().argmax(axis=1)
+        true_label = y.cpu().detach().numpy()
+        for i in range(batch_size):
+            acc_tabel[true_label[i], pred_label[i]] += 1
+
+    acc_tabel /= len(loader.dataset)/10.0
+    print(acc_tabel)
+
+
 if __name__ == "__main__":
-    get_test_acc()
+    get_acc_by_label()
 

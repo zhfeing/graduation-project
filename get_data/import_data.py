@@ -128,11 +128,11 @@ def import_numpy_data(
     valid_y, train_y = train_y[0:valid_size, ...], train_y[valid_size:, ...]
 
     # data augmentation
-    train_x, train_y = data_augmentation.data_augmentation(
-        train_x,
-        train_y,
-        channel_first=to_channel_first
-    )
+    # train_x, train_y = data_augmentation.data_augmentation(
+    #     train_x,
+    #     train_y,
+    #     channel_first=to_channel_first
+    # )
     # data normalization
     if to_channel_first:
         mean = np.mean(train_x, axis=(0, 2, 3)).astype(np.float32).reshape([1, 3, 1, 1])
@@ -185,7 +185,7 @@ def array_to_cuda_tensor(x):
     return x
 
 
-def import_dataset(load_dir, to_cuda=True):
+def import_dataset(load_dir, train_to_cuda=False, test_to_cuda=True):
     from torch.utils import data
     import torch
 
@@ -202,16 +202,19 @@ def import_dataset(load_dir, to_cuda=True):
     test_x = data_dict['test_x']
     test_y = data_dict['test_y'].argmax(axis=1)
 
-    if to_cuda:
+    if train_to_cuda:
         train_x = array_to_cuda_tensor(train_x).float()
         train_y = array_to_cuda_tensor(train_y).long()
+    else:
+        train_x = torch.Tensor(train_x).float()
+        train_y = torch.Tensor(train_y).long()
+
+    if test_to_cuda:
         valid_x = array_to_cuda_tensor(valid_x).float()
         valid_y = array_to_cuda_tensor(valid_y).long()
         test_x = array_to_cuda_tensor(test_x).float()
         test_y = array_to_cuda_tensor(test_y).long()
     else:
-        train_x = torch.Tensor(train_x).float()
-        train_y = torch.Tensor(train_y).long()
         valid_x = torch.Tensor(valid_x).float()
         valid_y = torch.Tensor(valid_y).long()
         test_x = torch.Tensor(test_x).float()
@@ -232,9 +235,9 @@ def import_dataset(load_dir, to_cuda=True):
     return train_set, valid_set, test_set
 
 
-def test(cifar_10_dir, load_dir, channel_first):
+def import_test(cifar_10_dir, load_dir, channel_first):
     import cv2
-    data_dict = import_numpy_data(cifar_10_dir, load_dir, reload=False, valid_size=5000, to_channel_first=channel_first)
+    data_dict = import_numpy_data(cifar_10_dir, load_dir, reload=True, valid_size=5000, to_channel_first=channel_first)
 
     cv2.namedWindow("test", cv2.WINDOW_NORMAL)
     for i in range(20):
@@ -262,6 +265,6 @@ if __name__ == "__main__":
     # save_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
     save_data_path = "/media/Data/datasets/cifar/cifar-10-python/data"
 
-    test(cifar_data_path, save_data_path, True)
+    import_test(cifar_data_path, save_data_path, True)
 
 

@@ -3,6 +3,7 @@ from torch.utils import data
 from torch import optim
 import numpy as np
 import os
+from get_data import data_augmentation
 
 
 def eval_model(model, data_loader, eval_loss_function, get_true_pred, detach_pred):
@@ -59,13 +60,15 @@ def fit(
         epoch_best_acc = 0
         model.train()
 
-        if ep % 10 == 0 and ep > 0:
+        if ep == 50 or ep == 80:
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.5
-            print("\n[info]: lr halved")
+                param_group['lr'] *= 0.1
+            print("\n[info]: lr divided by 10")
 
         for step, (x, y) in enumerate(train_loader):
             batch_size = x.size()[0]
+            x = data_augmentation.tensor_data_argumentation(x)
+            x, y = x.cuda(), y.cuda()
             pred = model(x)
             loss = train_loss_function(pred, y)
             # back propagation
@@ -157,7 +160,7 @@ def train(
     if regularize:
         weight_decay = 1e-4
 
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
     loss_val_his, acc_val_his = fit(
         model=model,

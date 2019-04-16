@@ -9,7 +9,7 @@ def test(test_version, test_set, new_model, eval_loss_function, get_true_pred, d
     model, create_new = load_model.load_model(
         version=test_version,
         new_model=new_model,
-        just_weights=False,
+        just_weights=True,
         retrain=False,
         to_cuda=True
     )

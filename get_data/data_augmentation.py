@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import cv2
 
@@ -15,7 +16,7 @@ def random_crop_img(img, padding_size):
     return img
 
 
-def data_augmentation(train_x, train_y, channel_first, flip_pr=0.5, padding_size=4, noise_std=1.414):
+def numpy_data_augmentation(train_x, train_y, channel_first, flip_pr=0.5, padding_size=4, noise_std=1.414):
     # padding and randomly flip
     flipped_img_list = []
     flipped_label_list = []
@@ -70,3 +71,23 @@ def data_augmentation(train_x, train_y, channel_first, flip_pr=0.5, padding_size
     return train_x, train_y
 
 
+def tensor_data_argumentation(x, flip_pr=0.5, padding_size=4, noise_std=5.5e-3):
+    x = x.detach().numpy()
+    x = np.transpose(x, axes=[0, 2, 3, 1])
+    for i in range(x.shape[0]):
+        img = x[i]
+        # randomly flip img
+        flip = np.random.binomial(1, flip_pr)
+        if flip == 1:       # flip this img
+            img = cv2.flip(img, 1)
+
+        img = random_crop_img(img, padding_size)
+        # write back
+        x[i] = img
+
+    x = np.transpose(x, axes=[0, 3, 1, 2])
+    x = torch.Tensor(x)
+    return x
+
+
+img = cv2.imread("")

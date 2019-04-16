@@ -60,7 +60,9 @@ model, create_new = load_model.load_model(
 )
 
 train_set, valid_set, test_set = import_data.import_dataset(
-    load_dir=args.load_data_dir
+    load_dir=args.load_data_dir,
+    train_to_cuda=False,
+    test_to_cuda=True
 )
 
 train.train(
