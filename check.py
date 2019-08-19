@@ -74,99 +74,87 @@ def check_failed_example():
 
 
 class EnsembleModel(nn.Module):
-    def __init__(self, googlenet_version_1, googlenet_version_2, resnet_version):
+    def __init__(self, googlenet_list, resnet_list):
         super(EnsembleModel, self).__init__()
-        self._googlenet_version_1 = googlenet_version_1
-        self._googlenet_version_2 = googlenet_version_2
-        # self._googlenet_version_3 = googlenet_version_3
-        self._resnet_version = resnet_version
-        self._google_model_1 = None
-        self._google_model_2 = None
-        self._resnet_model = None
+        self._googlenet_list = googlenet_list
+        self._resnet_list = resnet_list
+        self._google_model = list()
+        self._resnet_model = list()
         self.build()
 
     def build(self):
-        self._google_model_1, create_new = load_model.load_model(
-            version=self._googlenet_version_1,
-            new_model=googLeNet.my_googLeNet,
-            just_weights=False,
-            retrain=False,
-            to_cuda=True
-        )
-        if create_new:
-            print("[info]: load googlenet failed")
-            exit(-1)
+        for version in self._googlenet_list:
+            model, create_new = load_model.load_model(
+                version=version,
+                new_model=googLeNet.my_googLeNet,
+                just_weights=False,
+                retrain=False,
+                to_cuda=True
+            )
+            if create_new:
+                print("[info]: load googlenet failed")
+                exit(-1)
+            self._google_model.append(model)
 
-        self._google_model_2, create_new = load_model.load_model(
-            version=self._googlenet_version_2,
-            new_model=googLeNet.my_googLeNet,
-            just_weights=False,
-            retrain=False,
-            to_cuda=True
-        )
-        if create_new:
-            print("[info]: load googlenet failed")
-            exit(-1)
-        #
-        # self._google_model_3, create_new = load_model.load_model(
-        #     version=self._googlenet_version_3,
-        #     new_model=googLeNet.my_googLeNet,
-        #     just_weights=False,
-        #     retrain=False,
-        #     to_cuda=True
-        # )
-        # if create_new:
-        #     print("[info]: load googlenet failed")
-        #     exit(-1)
-
-        self._resnet_model, create_new = load_model.load_model(
-            version=self._resnet_version,
-            new_model=resnet.my_resnet,
-            just_weights=False,
-            retrain=False,
-            to_cuda=True
-        )
-        if create_new:
-            print("[info]: load resnet failed")
-            exit(-1)
+        for version in self._resnet_list:
+            model, create_new = load_model.load_model(
+                version=version,
+                new_model=resnet.my_resnet,
+                just_weights=False,
+                retrain=False,
+                to_cuda=True
+            )
+            if create_new:
+                print("[info]: load resnet failed")
+                exit(-1)
+            self._resnet_model.append(model)
 
     def forward(self, x):
-        x1, _, _ = self._google_model_1(x)
-        x2, _, _ = self._google_model_2(x)
-        # x3, _, _ = self._google_model_3(x)
-        x4 = self._resnet_model(x)
-        x = (x1 + x2 + x4)/3.0
-        return x
+        y = 0
+        for model in self._google_model:
+            y += model(x)[0]
+
+        for model in self._resnet_model:
+            y += model(x)
+
+        y /= len(self._google_model) + len(self._resnet_model)
+        return y
 
 
 def check_ensemble():
     import train
     from torch.utils import data
 
-    model = EnsembleModel("googlenet-1.0", "googlenet-2.0", "resnet-2.0")
-
+    model = EnsembleModel(["googlenet-4.0", "googlenet-3.0", "googlenet-1.0"], ["resnet-3.0"])
+    model.eval()
     default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
     train_set, valid_set, test_set = import_data.import_dataset(load_dir=default_load_data_dir)
 
-    test_loader = data.DataLoader(test_set, batch_size=128)
+    test_loader = data.DataLoader(test_set, batch_size=32)
 
-    loss, acc = train.eval_model(model, test_loader, nn.CrossEntropyLoss(), lambda x: x, lambda x: x.detach())
+    loss, acc = train.eval_model(
+        model, test_loader,
+        lambda pred, y, x: nn.CrossEntropyLoss()(pred, y),
+        lambda x: x, lambda x: x.detach()
+    )
     print("loss: {}, acc: {}".format(loss, acc))
 
+    # load_model.print_parameters(model)
 
-def get_test_acc():
+
+def get_test_acc(version):
     import test
-    from model_zoo import resnet
+    from model_zoo import resnet, googLeNet
     import utils
 
     new_model = resnet.my_resnet
     new_util = utils.ResNetUtils()
 
     default_load_data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "get_data/data")
-    train_set, valid_set, test_set = import_data.import_dataset(load_dir=default_load_data_dir)
+    train_set, valid_set, test_set = import_data.import_dataset(load_dir=default_load_data_dir, )
     test.test(
-        "resnet-1.0", test_set, new_model, new_util.loss_for_eval,
-        new_util.get_true_pred, new_util.detach_pred, 128
+        version, test_set, new_model, new_util.loss_for_eval,
+        new_util.get_true_pred, new_util.detach_pred, 128, just_weights=False
     )
 
 
@@ -205,7 +193,24 @@ def get_acc_by_label():
     print(acc_tabel)
 
 
+def get_params(version):
+    model, create_new = load_model.load_model(
+        version=version,
+        new_model=resnet.my_resnet,
+        just_weights=False,
+        retrain=False,
+        to_cuda=False
+    )
+    if create_new:
+        print("[info]: load resnet failed")
+        exit(-1)
+    load_model.print_parameters(model)
+
+
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(1)
-    check_ensemble()
+    version = "ensemble-3.0"
+    get_test_acc(version)
+    # get_params(version)
+    # check_ensemble()
 

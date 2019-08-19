@@ -9,7 +9,7 @@ from get_data import data_augmentation
 def eval_model(model, data_loader, eval_loss_function, get_true_pred, detach_pred):
     """
     eval_loss_function: calculate loss from output and ground truth, in the function, it will be called as :
-        eval_loss_function(pred, label), which pred comes from model output
+        eval_loss_function(pred, label, x), which pred comes from model output
     get_true_pred: get true prediction from output, useful especially when model output a tuple, it will be called as
         true_pred = get_true_pred(module_output)
     detach_pred: detach pred from output, useful when model output a tuple called as detach_pred(module_output)
@@ -22,7 +22,7 @@ def eval_model(model, data_loader, eval_loss_function, get_true_pred, detach_pre
         batch_size = x.size()[0]
         pred = model(x)
         pred = detach_pred(pred)
-        loss += eval_loss_function(pred, y)
+        loss += eval_loss_function(pred, y, x)
         pred = get_true_pred(pred)
         pred = torch.max(pred, 1)[1]
         acc += (pred == y).sum().float() / batch_size
@@ -42,7 +42,7 @@ def fit(
     """
     check_freq: check training result in step
     train_loss_function: calculate loss from output and ground truth, in the function, it will be called as :
-        train_loss_function(pred, label)
+        train_loss_function(pred, label, x)
     get_true_pred: get true prediction from output, useful especially when model output a tuple, it will be called as
         true_pred = get_true_pred(module_output)
     eval_loss_function: called by function 'eval_model'
@@ -66,10 +66,16 @@ def fit(
 
         for step, (x, y) in enumerate(train_loader):
             batch_size = x.size()[0]
-            x = data_augmentation.tensor_data_argumentation(x)
+            x = data_augmentation.tensor_data_argumentation(
+                x=x,
+                flip_pr=0.5,
+                padding_size=4,
+                max_rotate_angle=15,
+                max_scale=1.2
+            )
             x, y = x.cuda(), y.cuda()
             pred = model(x)
-            loss = train_loss_function(pred, y)
+            loss = train_loss_function(pred, y, x)
             # back propagation
             optimizer.zero_grad()
             loss.backward()

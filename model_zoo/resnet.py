@@ -137,14 +137,14 @@ class Resnet(nn.Module):
 
 def my_resnet():
     model = Resnet(
-        n=18,
+        n=5,
         in_channels=3,
         channel_base=16
     )
     return model
 
 
-def test():
+def my_test():
     import numpy as np
 
     resnet_model = my_resnet()
@@ -166,4 +166,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    my_test()

@@ -1,14 +1,12 @@
 import argparse
-import torch
 import os
 import draw_his
 import train
 import test
 from get_data import import_data
-from model_zoo import googLeNet
-from model_zoo import resnet
-from model_zoo import load_model
+from model_zoo import googLeNet, resnet, load_model
 import utils
+import ensembel_model
 
 
 def str2bool(v):
@@ -33,6 +31,8 @@ parser.add_argument('--load_data_dir', action='store', type=str, default=default
 parser.add_argument('--retrain', type=lambda x: bool(str2bool(x)), default=False)
 parser.add_argument('--regularize', type=lambda x: bool(str2bool(x)), default=False)
 parser.add_argument('--batch_size', action='store', type=int, default=32)
+parser.add_argument('--T', action='store', type=float, default=10)
+parser.add_argument('--alpha', action='store', type=float, default=0.1)
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(args.gpu)
@@ -45,13 +45,22 @@ print("[info]: load_version: {}".format(args.load_v))
 print("[info]: retrain: {}".format(args.retrain))
 print("[info]: regularize: {}".format(args.regularize))
 print("[info]: batch_size: {}".format(args.batch_size))
+print("[info]: T: {}".format(args.T))
+print("[info]: alpha: {}".format(args.alpha))
 
 
-my_util = utils.GoogLeNetUtils()
-# my_util = utils.ResNetUtils()
-new_model = googLeNet.my_googLeNet
-# new_model = resnet.my_resnet
-learn_rate_schedule = utils.google_learn_rate_schedule
+# my_util = utils.GoogLeNetUtils()
+my_util = utils.ResNetUtils()
+
+# my_util = utils.DistillModelUtils(
+#     cumbersome_model=ensembel_model.my_ensembel_model(),
+#     T=args.T,
+#     alpha=args.alpha
+# )
+
+# new_model = googLeNet.my_googLeNet
+new_model = resnet.my_resnet
+
 
 model, create_new = load_model.load_model(
     version=args.load_v,
@@ -80,8 +89,12 @@ train.train(
     get_true_pred=my_util.get_true_pred,
     eval_loss_function=my_util.loss_for_eval,
     detach_pred=my_util.detach_pred,
-    learn_rate_schedule=learn_rate_schedule
+    learn_rate_schedule=my_util.learn_rate_schedule
 )
+
+draw_his.draw_his(version=args.train_v, show=False)
+model = model.cpu()
+load_model.save_model(args.train_v, model)
 
 test.test(
     test_version=args.train_v,
@@ -90,10 +103,7 @@ test.test(
     batch_size=args.batch_size,
     get_true_pred=my_util.get_true_pred,
     eval_loss_function=my_util.loss_for_eval,
-    detach_pred=my_util.detach_pred
+    detach_pred=my_util.detach_pred,
+    just_weights=False
 )
 
-draw_his.draw_his(version=args.train_v, show=False)
-
-model = model.cpu()
-load_model.save_model(args.train_v, model)
